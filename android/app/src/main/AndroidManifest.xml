@@ -1,0 +1,272 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <application
+        android:label="terang_bulan_zaini"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher">
+        
+        ```
+
+---
+
+### 3. Otak Baru (`home_controller.dart`)
+Ini bagian paling sibuk. Dia mengatur upload gambar ke Supabase Storage, menghitung jarak GPS, dan memproses pembayaran.
+
+**File:** `lib/app/modules/home/controllers/home_controller.dart`
+
+```dart
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:geolocator/geolocator.dart';
+import '../../../data/models/product_model.dart';
+import '../../auth/views/login_view.dart';
+
+class HomeController extends GetxController {
+  final supabase = Supabase.instance.client;
+  
+  // Data Produk & Keranjang
+  var products = <Product>[].obs;
+  var cart = <Product>[].obs;
+  var isLoading = true.obs;
+  
+  // Navigasi Bawah
+  var tabIndex = 0.obs;
+
+  // Lokasi & Jarak
+  var distanceKm = 0.0.obs;
+  var address = "Mencari lokasi...".obs;
+  // Koordinat Toko (Misal: Alun-alun Malang)
+  final double shopLat = -7.9826; 
+  final double shopLng = 112.6308;
+
+  // Admin Upload
+  final nameC = TextEditingController();
+  final priceC = TextEditingController();
+  final descC = TextEditingController();
+  var selectedImage = Rx<File?>(null); // File gambar lokal
+
+  @override
+  void onInit() {
+    super.onInit();
+    fetchProducts();
+    _determinePosition(); // Cek lokasi saat aplikasi dibuka
+  }
+
+  void changeTab(int index) {
+    tabIndex.value = index;
+  }
+
+  // --- 1. FITUR LOKASI (GPS) ---
+  Future<void> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      address.value = "GPS Mati";
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        address.value = "Izin Lokasi Ditolak";
+        return;
+      }
+    }
+
+    // Ambil posisi user
+    Position position = await Geolocator.getCurrentPosition();
+    
+    // Hitung jarak ke toko (dalam Meter lalu ke KM)
+    double distInMeters = Geolocator.distanceBetween(
+      position.latitude, position.longitude, 
+      shopLat, shopLng
+    );
+    distanceKm.value = distInMeters / 1000;
+    address.value = "${distanceKm.value.toStringAsFixed(1)} km dari toko";
+  }
+
+  // --- 2. FITUR PRODUK ---
+  void fetchProducts() async {
+    try {
+      isLoading.value = true;
+      final response = await supabase.from('products').select().order('id');
+      final data = response as List<dynamic>;
+      products.value = data.map((e) => Product.fromJson(e)).toList();
+    } catch (e) {
+      print("Error fetch: $e");
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // --- 3. FITUR ADMIN (Upload Gambar) ---
+  Future<void> pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      selectedImage.value = File(image.path);
+    }
+  }
+
+  Future<void> addProduct() async {
+    if (nameC.text.isEmpty || priceC.text.isEmpty) {
+       Get.snackbar("Error", "Nama dan Harga wajib diisi");
+       return;
+    }
+
+    try {
+      isLoading.value = true;
+      String? imageUrl;
+
+      // Upload Gambar ke Storage Supabase
+      if (selectedImage.value != null) {
+        final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final path = 'uploads/$fileName';
+        
+        // Pastikan kamu sudah buat Bucket 'menu_images' di Supabase Storage
+        await supabase.storage.from('menu_images').upload(
+          path, 
+          selectedImage.value!,
+          fileOptions: const FileOptions(contentType: 'image/jpeg')
+        );
+
+        // Dapatkan Public URL agar bisa dilihat semua orang
+        imageUrl = supabase.storage.from('menu_images').getPublicUrl(path);
+      }
+
+      // Simpan ke Database
+      await supabase.from('products').insert({
+        'name': nameC.text,
+        'price': int.parse(priceC.text),
+        'description': descC.text,
+        'image_url': imageUrl,
+        'category': 'base',
+      });
+
+      fetchProducts();
+      Get.back(); // Tutup Dialog
+      _resetForm();
+      Get.snackbar("Sukses", "Menu berhasil ditambah!");
+    } catch (e) {
+      Get.snackbar("Error", "Gagal upload: $e");
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  void _resetForm() {
+    nameC.clear(); priceC.clear(); descC.clear();
+    selectedImage.value = null;
+  }
+
+  // --- 4. FITUR MEMBER (Keranjang & Bayar) ---
+  void addToCart(Product product) => cart.add(product);
+
+  // Dialog Metode Pembayaran (Revisi B)
+  void showPaymentDialog() {
+    if (cart.isEmpty) return;
+    int total = cart.fold(0, (sum, item) => sum + item.price);
+
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text("Metode Pembayaran", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            ListTile(
+              leading: const Icon(Icons.qr_code, color: Colors.blue),
+              title: const Text("QRIS / Transfer"),
+              subtitle: const Text("BCA: 123-456-7890 a.n Zaini"),
+              onTap: () => _processOrder('transfer', total),
+            ),
+            ListTile(
+              leading: const Icon(Icons.money, color: Colors.green),
+              title: const Text("Tunai (Cash)"),
+              subtitle: const Text("Bayar saat pesanan sampai"),
+              onTap: () => _processOrder('cash', total),
+            ),
+          ],
+        ),
+      )
+    );
+  }
+
+  void _processOrder(String method, int total) async {
+    Get.back(); // Tutup bottom sheet
+    
+    // Simulasi Loading Bayar
+    Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
+    await Future.delayed(const Duration(seconds: 2)); // Pura-pura proses bank
+    Get.back(); // Tutup loading
+
+    // Simpan Order ke Database (Revisi: Simpan metode bayar)
+    try {
+      final user = supabase.auth.currentUser;
+      if (user != null) {
+        await supabase.from('orders').insert({
+          'user_id': user.id,
+          'total_price': total,
+          'status': 'Order Placed',
+          'payment_method': method,
+          'payment_status': method == 'transfer' ? 'paid' : 'pending',
+          // 'items': cart.toList() // Simpan JSON kalau perlu (opsional)
+        });
+      }
+      
+      cart.clear();
+      
+      // Tampilkan Halaman Sukses
+      Get.to(() => const PaymentSuccessView());
+
+    } catch (e) {
+      Get.snackbar("Error", "Gagal pesan: $e");
+    }
+  }
+  
+  void logout() async {
+    await supabase.auth.signOut();
+    Get.offAll(() => LoginView());
+  }
+}
+
+// Halaman Sukses Sederhana
+class PaymentSuccessView extends StatelessWidget {
+  const PaymentSuccessView({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.blue,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.check_circle, size: 100, color: Colors.white),
+            const SizedBox(height: 20),
+            const Text("Pembayaran Berhasil!", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+            const Text("Pesanan segera diproses.", style: TextStyle(color: Colors.white70)),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: () => Get.back(), 
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.blue),
+              child: const Text("Kembali ke Menu")
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
