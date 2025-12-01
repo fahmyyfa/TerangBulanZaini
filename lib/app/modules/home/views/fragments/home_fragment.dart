@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:badges/badges.dart' as badges;
 import '../../controllers/home_controller.dart';
+import '../map_view.dart'; // Import MapView
 
 class HomeFragment extends StatelessWidget {
   final controller = Get.find<HomeController>();
@@ -17,39 +18,70 @@ class HomeFragment extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Obx(() => Text(
-              controller.isAdmin.value ? "Mode Admin" : "Lokasi Pengiriman:",
-              style: TextStyle(
-                  fontSize: 10,
-                  color: controller.isAdmin.value ? Colors.red : Colors.grey))),
-          Row(children: [
-            const Icon(Icons.location_on, size: 14, color: Colors.blue),
-            const SizedBox(width: 4),
-            Obx(() => Text(controller.address.value,
-                style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.blue.shade800,
-                    fontWeight: FontWeight.bold))),
-          ]),
-        ]),
+        title: GestureDetector( // BISA DIKLIK KE PETA
+          onTap: () => !controller.isAdmin.value ? Get.to(() => MapView()) : null,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start, 
+            children: [
+              Row(
+                children: [
+                  Obx(() => Text(
+                      controller.isAdmin.value ? "Mode Admin" : "Lokasi Pengiriman:",
+                      style: TextStyle(
+                          fontSize: 10,
+                          color: controller.isAdmin.value ? Colors.red : Colors.grey))),
+                  const SizedBox(width: 5),
+                  // Indikator Sumber Lokasi (Network/GPS)
+                  Obx(() => !controller.isAdmin.value 
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: controller.locationSource.value.contains("GPS") 
+                            ? Colors.green.shade100 : Colors.orange.shade100,
+                          borderRadius: BorderRadius.circular(4)
+                        ),
+                        child: Text(controller.locationSource.value, 
+                          style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold,
+                            color: controller.locationSource.value.contains("GPS") 
+                            ? Colors.green : Colors.deepOrange
+                          )),
+                      )
+                    : const SizedBox()
+                  ),
+                ],
+              ),
+              Row(children: [
+                const Icon(Icons.location_on, size: 14, color: Colors.blue),
+                const SizedBox(width: 4),
+                // Menampilkan Koordinat/Alamat
+                Obx(() => Text(
+                  controller.address.value.length > 25 
+                    ? "${controller.address.value.substring(0, 25)}..." 
+                    : controller.address.value,
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.blue.shade800,
+                        fontWeight: FontWeight.bold))),
+                const Icon(Icons.arrow_drop_down, color: Colors.blue, size: 18)
+              ]),
+            ]),
+        ),
         actions: [
           Obx(() => !controller.isAdmin.value
               ? Padding(
                   padding: const EdgeInsets.only(right: 20, top: 10),
                   child: badges.Badge(
                     badgeContent: Text('${controller.cart.length}',
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 10)),
+                        style: const TextStyle(color: Colors.white, fontSize: 10)),
                     child: IconButton(
-                        icon: Icon(Icons.shopping_cart,
-                            color: Colors.blue.shade800),
+                        icon: Icon(Icons.shopping_cart, color: Colors.blue.shade800),
                         onPressed: () => controller.showPaymentDialog()),
                   ),
                 )
               : const SizedBox()),
         ],
       ),
+      // ... (SISA KODE BODY SAMA SEPERTI YANG KAMU KIRIM) ...
       body: RefreshIndicator(
         onRefresh: () async => controller.fetchProducts(),
         child: SingleChildScrollView(
@@ -65,8 +97,9 @@ class HomeFragment extends StatelessWidget {
                       style: GoogleFonts.poppins(
                           fontSize: 18, fontWeight: FontWeight.bold))),
               Obx(() {
-                if (controller.isLoading.value)
+                if (controller.isLoading.value) {
                   return const Center(child: CircularProgressIndicator());
+                }
                 return GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -79,91 +112,64 @@ class HomeFragment extends StatelessWidget {
                   itemCount: controller.products.length,
                   itemBuilder: (context, index) {
                     final product = controller.products[index];
+                    // ... (LOGIC ITEM BUILDER TETAP SAMA) ...
+                    // Pastikan kode tampilan produk tetap sama
                     return Container(
                       decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(15),
                           boxShadow: [
-                            BoxShadow(
-                                color: Colors.grey.shade100, blurRadius: 5)
+                            BoxShadow(color: Colors.grey.shade100, blurRadius: 5)
                           ]),
                       child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
                                 child: ClipRRect(
-                                    borderRadius: const BorderRadius.vertical(
-                                        top: Radius.circular(15)),
+                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
                                     child: Image.network(
-                                        product.imageUrl ??
-                                            "https://placehold.co/400x300/png?text=Menu",
+                                        product.imageUrl ?? "https://placehold.co/400x300/png?text=Menu",
                                         fit: BoxFit.cover,
                                         width: double.infinity,
                                         errorBuilder: (c, o, s) => Container(
                                             color: Colors.grey.shade200,
-                                            child: const Icon(
-                                                Icons.broken_image))))),
+                                            child: const Icon(Icons.broken_image))))),
                             Padding(
                                 padding: const EdgeInsets.all(10.0),
                                 child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(product.name,
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold),
+                                          style: const TextStyle(fontWeight: FontWeight.bold),
                                           maxLines: 1),
                                       Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                           children: [
                                             Text(
-                                                NumberFormat.currency(
-                                                        locale: 'id',
-                                                        symbol: 'Rp ',
-                                                        decimalDigits: 0)
-                                                    .format(product.price),
-                                                style: TextStyle(
-                                                    color: Colors.blue.shade700,
-                                                    fontWeight:
-                                                        FontWeight.bold)),
+                                                NumberFormat.currency(locale: 'id', symbol: 'Rp ', decimalDigits: 0).format(product.price),
+                                                style: TextStyle(color: Colors.blue.shade700, fontWeight: FontWeight.bold)),
                                             InkWell(
-                                              onTap: () =>
-                                                  controller.isAdmin.value
-                                                      ? Get.defaultDialog(
-                                                          title: "Hapus?",
-                                                          textConfirm: "Ya",
-                                                          onConfirm: () {
-                                                            Get.back();
-                                                            controller
-                                                                .deleteProduct(
-                                                                    product.id);
-                                                          })
-                                                      : controller
-                                                          .addToCart(product),
-                                              child: Container(
-                                                  padding:
-                                                      const EdgeInsets.all(6),
-                                                  decoration: BoxDecoration(
-                                                      color: controller
-                                                              .isAdmin.value
-                                                          ? Colors.red.shade100
-                                                          : Colors.blue,
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              8)),
-                                                  child: Icon(
-                                                      controller.isAdmin.value
-                                                          ? Icons.delete
-                                                          : Icons.add,
-                                                      size: 16,
-                                                      color: controller
-                                                              .isAdmin.value
-                                                          ? Colors.red
-                                                          : Colors.white)),
-                                            )
+                                                onTap: () => controller.isAdmin.value
+                                                    ? Get.defaultDialog(
+                                                        title: "Hapus?",
+                                                        textConfirm: "Ya",
+                                                        onConfirm: () {
+                                                          Get.back();
+                                                          controller.deleteProduct(product.id);
+                                                        })
+                                                    : controller.addToCart(product),
+                                                child: Container(
+                                                    padding: const EdgeInsets.all(6),
+                                                    decoration: BoxDecoration(
+                                                        color: controller.isAdmin.value ? Colors.red.shade100 : Colors.blue,
+                                                        borderRadius: BorderRadius.circular(8)),
+                                                    child: Icon(
+                                                        controller.isAdmin.value ? Icons.delete : Icons.add,
+                                                        size: 16,
+                                                        color: controller.isAdmin.value ? Colors.red : Colors.white)
+                                                ))
                                           ])
-                                    ])),
+                                    ]))
                           ]),
                     );
                   },
@@ -178,7 +184,8 @@ class HomeFragment extends StatelessWidget {
   }
 
   Widget _buildPromoBanner() {
-    return Container(
+      // ... (KODE BANNER TETAP SAMA) ...
+      return Container(
       height: 160,
       margin: const EdgeInsets.all(16),
       width: double.infinity,
