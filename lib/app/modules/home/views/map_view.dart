@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart'; // PENTING: Untuk format jam (Timestamp)
 import '../controllers/home_controller.dart';
 
 class MapView extends StatelessWidget {
@@ -21,6 +22,7 @@ class MapView extends StatelessWidget {
       ),
       body: Stack(
         children: [
+          // 1. PETA (FLUTTER MAP)
           Obx(() {
             final userPos = LatLng(controller.currentLat.value, controller.currentLng.value);
             final shopPos = LatLng(controller.shopLat, controller.shopLng);
@@ -77,14 +79,15 @@ class MapView extends StatelessWidget {
             );
           }),
           
-          // --- REVISI 1: ZOOM CONTROLS ---
+          // 2. KONTROL TOMBOL (ZOOM & INFO LAPORAN)
           Positioned(
             top: 20,
             right: 20,
             child: Column(
               children: [
+                // Tombol Zoom In (+)
                 FloatingActionButton.small(
-                  heroTag: "zoom_in",
+                  heroTag: "zoom_in", // Wajib beda tag
                   backgroundColor: Colors.white,
                   child: const Icon(Icons.add, color: Colors.black87),
                   onPressed: () {
@@ -93,8 +96,10 @@ class MapView extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 10),
+                
+                // Tombol Zoom Out (-)
                 FloatingActionButton.small(
-                  heroTag: "zoom_out",
+                  heroTag: "zoom_out", // Wajib beda tag
                   backgroundColor: Colors.white,
                   child: const Icon(Icons.remove, color: Colors.black87),
                   onPressed: () {
@@ -102,11 +107,20 @@ class MapView extends StatelessWidget {
                     mapController.move(mapController.camera.center, currentZoom - 1);
                   },
                 ),
+                const SizedBox(height: 10),
+
+                // --- TOMBOL INFO DATA LAPORAN (?) ---
+                FloatingActionButton.small(
+                  heroTag: "info_debug", // Wajib beda tag
+                  backgroundColor: Colors.blue.shade800, 
+                  child: const Icon(Icons.question_mark, color: Colors.white),
+                  onPressed: () => _showDebugInfo(),
+                ),
               ],
             ),
           ),
           
-          // Info Card di Bawah
+          // 3. INFO CARD JARAK (DI BAWAH)
           Positioned(
             bottom: 20, left: 20, right: 20,
             child: Container(
@@ -129,6 +143,48 @@ class MapView extends StatelessWidget {
               ),
             ),
           )
+        ],
+      ),
+    );
+  }
+
+  // --- FUNGSI POPUP INFO LAPORAN ---
+  void _showDebugInfo() {
+    Get.defaultDialog(
+      title: "Data Laporan (Modul 5)",
+      titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+      radius: 10,
+      content: Obx(() => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildInfoRow("Provider", controller.locationSource.value.contains("GPS") ? "GPS" : "Network"),
+          const Divider(),
+          _buildInfoRow("Latitude", controller.currentLat.value.toStringAsFixed(6)),
+          _buildInfoRow("Longitude", controller.currentLng.value.toStringAsFixed(6)),
+          const Divider(),
+          // Data Penting untuk Tabel Laporan:
+          _buildInfoRow("Accuracy", "${controller.currentAccuracy.value.toStringAsFixed(1)} m"),
+          _buildInfoRow("Speed", "${controller.currentSpeed.value.toStringAsFixed(1)} m/s"),
+          const Divider(),
+          _buildInfoRow("Timestamp", DateFormat('HH:mm:ss').format(controller.lastUpdated.value)),
+        ],
+      )),
+      textConfirm: "Tutup",
+      confirmTextColor: Colors.white,
+      buttonColor: Colors.blue.shade800,
+      onConfirm: () => Get.back(),
+    );
+  }
+
+  // Widget Helper untuk Baris Info
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.grey)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
         ],
       ),
     );

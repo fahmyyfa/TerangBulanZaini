@@ -31,7 +31,7 @@ class HomeController extends GetxController {
   var address = "Mencari lokasi...".obs;
   var locationSource = "Mencari...".obs; // GPS atau Network
   var distanceKm = 0.0.obs;
-  
+
   // Posisi Toko (Tetap)
   final double shopLat = -7.9826;
   final double shopLng = 112.6308;
@@ -39,13 +39,13 @@ class HomeController extends GetxController {
   // Posisi User (Live)
   var currentLat = 0.0.obs;
   var currentLng = 0.0.obs;
-  
+
   // Posisi Pin Pilihan User (Untuk pengiriman)
   var selectedLat = 0.0.obs;
   var selectedLng = 0.0.obs;
 
   // State Pilihan Pengiriman (Delivery vs Pickup)
-  var isDelivery = true.obs; 
+  var isDelivery = true.obs;
 
   // Stream untuk Live Location
   StreamSubscription<Position>? _positionStream;
@@ -54,11 +54,15 @@ class HomeController extends GetxController {
   final nameC = TextEditingController();
   final priceC = TextEditingController();
   final descC = TextEditingController();
-  
+
   // Image Variables
   var webImage = Rx<Uint8List?>(null);
   var mobileImage = Rx<File?>(null);
   String? _imageExtension;
+
+  var currentAccuracy = 0.0.obs;
+  var currentSpeed = 0.0.obs;
+  var lastUpdated = DateTime.now().obs;
 
   @override
   void onInit() {
@@ -121,14 +125,15 @@ class HomeController extends GetxController {
       String? imageUrl;
       // Upload Logic
       if (webImage.value != null) {
-        final fileName = '${DateTime.now().millisecondsSinceEpoch}.$_imageExtension';
+        final fileName =
+            '${DateTime.now().millisecondsSinceEpoch}.$_imageExtension';
         final path = 'uploads/$fileName';
         await supabase.storage.from('menu_images').uploadBinary(
             path, webImage.value!,
             fileOptions: FileOptions(contentType: 'image/$_imageExtension'));
         imageUrl = supabase.storage.from('menu_images').getPublicUrl(path);
       }
-      
+
       await supabase.from('products').insert({
         'name': nameC.text,
         'price': int.parse(priceC.text),
@@ -151,7 +156,8 @@ class HomeController extends GetxController {
     try {
       await supabase.from('products').delete().eq('id', id);
       fetchProducts();
-      Get.snackbar("Dihapus", "Menu dihapus", backgroundColor: Colors.red.shade100);
+      Get.snackbar("Dihapus", "Menu dihapus",
+          backgroundColor: Colors.red.shade100);
     } catch (e) {
       Get.snackbar("Error", "$e");
     }
@@ -190,7 +196,8 @@ class HomeController extends GetxController {
             .order('created_at', ascending: false);
         List<dynamic> data = response as List<dynamic>;
         double revenue = 0;
-        for (var item in data) revenue += (item['total_price'] as num).toDouble();
+        for (var item in data)
+          revenue += (item['total_price'] as num).toDouble();
         totalRevenue.value = revenue;
         totalOrdersCount.value = data.length;
         myOrders.value = List<Map<String, dynamic>>.from(data);
@@ -200,7 +207,8 @@ class HomeController extends GetxController {
             .select()
             .eq('user_id', user.id)
             .order('created_at', ascending: false);
-        myOrders.value = List<Map<String, dynamic>>.from(response as List<dynamic>);
+        myOrders.value =
+            List<Map<String, dynamic>>.from(response as List<dynamic>);
       }
     } catch (e) {
       print("Error orders: $e");
@@ -212,7 +220,7 @@ class HomeController extends GetxController {
   // --- LOGIKA PEMBAYARAN (REVISI: PICKUP vs DELIVERY) ---
   void showPaymentDialog() {
     if (cart.isEmpty) return;
-    
+
     // Reset toggle ke Delivery setiap kali dialog dibuka
     isDelivery.value = true;
 
@@ -233,11 +241,11 @@ class HomeController extends GetxController {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text("Konfirmasi Pesanan", 
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold), 
+              const Text("Konfirmasi Pesanan",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center),
               const SizedBox(height: 20),
-              
+
               // Toggle Button
               Container(
                 decoration: BoxDecoration(
@@ -261,21 +269,28 @@ class HomeController extends GetxController {
               const SizedBox(height: 5),
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                 const Text("Ongkir"),
-                Text(isDelivery.value 
-                  ? "Rp $ongkir (${distanceKm.value.toStringAsFixed(1)} km)" 
-                  : "Rp 0 (Ambil di Toko)",
-                  style: TextStyle(color: isDelivery.value ? Colors.black : Colors.green)),
+                Text(
+                    isDelivery.value
+                        ? "Rp $ongkir (${distanceKm.value.toStringAsFixed(1)} km)"
+                        : "Rp 0 (Ambil di Toko)",
+                    style: TextStyle(
+                        color: isDelivery.value ? Colors.black : Colors.green)),
               ]),
               const Divider(thickness: 1, height: 20),
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                const Text("Total Bayar", style: TextStyle(fontWeight: FontWeight.bold)),
-                Text("Rp $grandTotal", 
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.blue.shade800)),
+                const Text("Total Bayar",
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                Text("Rp $grandTotal",
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: Colors.blue.shade800)),
               ]),
               const SizedBox(height: 20),
 
               // Tombol Bayar
-              const Text("Metode Pembayaran:", style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text("Metode Pembayaran:",
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               Row(
                 children: [
@@ -289,7 +304,7 @@ class HomeController extends GetxController {
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue.shade800, 
+                          backgroundColor: Colors.blue.shade800,
                           foregroundColor: Colors.white),
                       onPressed: () => _processOrder('cash', grandTotal),
                       child: const Text("Tunai"),
@@ -311,7 +326,9 @@ class HomeController extends GetxController {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: isDelivery.value == isDeliveryType ? Colors.blue.shade800 : Colors.transparent,
+          color: isDelivery.value == isDeliveryType
+              ? Colors.blue.shade800
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
         ),
         child: Text(
@@ -319,7 +336,9 @@ class HomeController extends GetxController {
           textAlign: TextAlign.center,
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: isDelivery.value == isDeliveryType ? Colors.white : Colors.grey.shade600,
+            color: isDelivery.value == isDeliveryType
+                ? Colors.white
+                : Colors.grey.shade600,
           ),
         ),
       ),
@@ -328,7 +347,8 @@ class HomeController extends GetxController {
 
   void _processOrder(String method, int total) async {
     Get.back();
-    Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
+    Get.dialog(const Center(child: CircularProgressIndicator()),
+        barrierDismissible: false);
     await Future.delayed(const Duration(seconds: 2));
     Get.back();
     try {
@@ -343,7 +363,8 @@ class HomeController extends GetxController {
       });
       cart.clear();
       fetchOrders();
-      Get.snackbar("Sukses", "Pesanan Diterima (${isDelivery.value ? 'Diantar' : 'Ambil Sendiri'})");
+      Get.snackbar("Sukses",
+          "Pesanan Diterima (${isDelivery.value ? 'Diantar' : 'Ambil Sendiri'})");
     } catch (e) {
       Get.snackbar("Error", "$e");
     }
@@ -368,15 +389,19 @@ class HomeController extends GetxController {
     }
 
     const LocationSettings locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.best, 
-      distanceFilter: 10, 
+      accuracy: LocationAccuracy.best,
+      distanceFilter: 0,
     );
 
-    _positionStream = Geolocator.getPositionStream(locationSettings: locationSettings)
-        .listen((Position position) {
-      
+    _positionStream =
+        Geolocator.getPositionStream(locationSettings: locationSettings)
+            .listen((Position position) {
       currentLat.value = position.latitude;
       currentLng.value = position.longitude;
+
+      currentAccuracy.value = position.accuracy;
+      currentSpeed.value = position.speed;
+      lastUpdated.value = position.timestamp ?? DateTime.now();
 
       if (selectedLat.value == 0.0) {
         selectedLat.value = position.latitude;
@@ -390,7 +415,8 @@ class HomeController extends GetxController {
         locationSource.value = "Network/WiFi (Estimasi)";
       }
 
-      address.value = "${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}";
+      address.value =
+          "${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}";
     });
   }
 
@@ -398,10 +424,12 @@ class HomeController extends GetxController {
     selectedLat.value = point.latitude;
     selectedLng.value = point.longitude;
     _calculateDistance();
-    address.value = "Pin: ${point.latitude.toStringAsFixed(4)}, ${point.longitude.toStringAsFixed(4)}";
+    address.value =
+        "Pin: ${point.latitude.toStringAsFixed(4)}, ${point.longitude.toStringAsFixed(4)}";
     Get.back();
-    Get.snackbar("Lokasi Diupdate", "Jarak pengiriman diperbarui", 
-      backgroundColor: Colors.green.shade100, duration: const Duration(seconds: 1));
+    Get.snackbar("Lokasi Diupdate", "Jarak pengiriman diperbarui",
+        backgroundColor: Colors.green.shade100,
+        duration: const Duration(seconds: 1));
   }
 
   void _calculateDistance() {
