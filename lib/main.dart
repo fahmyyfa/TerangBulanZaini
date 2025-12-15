@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-
-// Pastikan import ini sesuai dengan lokasi file kamu
+import 'package:firebase_core/firebase_core.dart';
+import 'app/services/notification_service.dart';
 import 'app/modules/home/views/home_view.dart';
 import 'app/modules/auth/views/login_view.dart';
 
@@ -14,6 +14,10 @@ void main() async {
   // 2. Load Kunci Rahasia dari file .env
   // (Pastikan file .env sudah ada di folder root project kamu)
   await dotenv.load(fileName: ".env");
+
+  await Firebase.initializeApp();
+  await NotificationService().initLocalNotification();
+  await NotificationService().initFCM();
 
   // 3. Koneksi ke Supabase (Menyalakan Listrik Ruko)
   await Supabase.initialize(

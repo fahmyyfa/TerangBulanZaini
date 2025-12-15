@@ -9,6 +9,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart' as latLng;
 import '../../../data/models/product_model.dart';
 import '../../auth/views/login_view.dart';
+import '../../../services/notification_service.dart';
 
 class HomeController extends GetxController {
   final supabase = Supabase.instance.client;
@@ -363,6 +364,21 @@ class HomeController extends GetxController {
       });
       cart.clear();
       fetchOrders();
+
+      NotificationService().showNotification(
+        "Pesanan Diproses", 
+        "Terima kasih! Pesanan martabakmu sedang disiapkan oleh Pak Zaini."
+      );
+
+      if (isDelivery.value) {
+        Future.delayed(const Duration(seconds: 10), () {
+          NotificationService().showNotification(
+            "Pesanan Sedang Diantar", 
+            "Kurir sedang menuju ke lokasimu. Siapkan uang pas ya!"
+          );
+        });
+      }
+
       Get.snackbar("Sukses",
           "Pesanan Diterima (${isDelivery.value ? 'Diantar' : 'Ambil Sendiri'})");
     } catch (e) {

@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart'; // PENTING: Untuk format jam (Timestamp)
+import 'package:intl/intl.dart'; 
 import '../controllers/home_controller.dart';
 
 class MapView extends StatelessWidget {
   final controller = Get.find<HomeController>();
   
-  // Controller untuk mengontrol Zoom secara manual
   final MapController mapController = MapController();
 
   MapView({super.key});
@@ -22,18 +21,15 @@ class MapView extends StatelessWidget {
       ),
       body: Stack(
         children: [
-          // 1. PETA (FLUTTER MAP)
           Obx(() {
             final userPos = LatLng(controller.currentLat.value, controller.currentLng.value);
             final shopPos = LatLng(controller.shopLat, controller.shopLng);
             
-            // Logika Marker Pin
             final pinPos = controller.selectedLat.value == 0
                 ? userPos
                 : LatLng(controller.selectedLat.value, controller.selectedLng.value);
 
             return FlutterMap(
-              // Sambungkan mapController disini
               mapController: mapController,
               options: MapOptions(
                 initialCenter: userPos.latitude == 0 ? shopPos : userPos,
@@ -79,15 +75,13 @@ class MapView extends StatelessWidget {
             );
           }),
           
-          // 2. KONTROL TOMBOL (ZOOM & INFO LAPORAN)
           Positioned(
             top: 20,
             right: 20,
             child: Column(
               children: [
-                // Tombol Zoom In (+)
                 FloatingActionButton.small(
-                  heroTag: "zoom_in", // Wajib beda tag
+                  heroTag: "zoom_in", 
                   backgroundColor: Colors.white,
                   child: const Icon(Icons.add, color: Colors.black87),
                   onPressed: () {
@@ -97,9 +91,8 @@ class MapView extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 
-                // Tombol Zoom Out (-)
                 FloatingActionButton.small(
-                  heroTag: "zoom_out", // Wajib beda tag
+                  heroTag: "zoom_out",
                   backgroundColor: Colors.white,
                   child: const Icon(Icons.remove, color: Colors.black87),
                   onPressed: () {
@@ -109,9 +102,8 @@ class MapView extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
 
-                // --- TOMBOL INFO DATA LAPORAN (?) ---
                 FloatingActionButton.small(
-                  heroTag: "info_debug", // Wajib beda tag
+                  heroTag: "info_debug",
                   backgroundColor: Colors.blue.shade800, 
                   child: const Icon(Icons.question_mark, color: Colors.white),
                   onPressed: () => _showDebugInfo(),
@@ -120,7 +112,6 @@ class MapView extends StatelessWidget {
             ),
           ),
           
-          // 3. INFO CARD JARAK (DI BAWAH)
           Positioned(
             bottom: 20, left: 20, right: 20,
             child: Container(
@@ -148,7 +139,6 @@ class MapView extends StatelessWidget {
     );
   }
 
-  // --- FUNGSI POPUP INFO LAPORAN ---
   void _showDebugInfo() {
     Get.defaultDialog(
       title: "Data Laporan (Modul 5)",
@@ -162,7 +152,6 @@ class MapView extends StatelessWidget {
           _buildInfoRow("Latitude", controller.currentLat.value.toStringAsFixed(6)),
           _buildInfoRow("Longitude", controller.currentLng.value.toStringAsFixed(6)),
           const Divider(),
-          // Data Penting untuk Tabel Laporan:
           _buildInfoRow("Accuracy", "${controller.currentAccuracy.value.toStringAsFixed(1)} m"),
           _buildInfoRow("Speed", "${controller.currentSpeed.value.toStringAsFixed(1)} m/s"),
           const Divider(),
@@ -176,7 +165,6 @@ class MapView extends StatelessWidget {
     );
   }
 
-  // Widget Helper untuk Baris Info
   Widget _buildInfoRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
