@@ -4,12 +4,43 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:badges/badges.dart' as badges;
 import '../../controllers/home_controller.dart';
-import '../map_view.dart'; // Import MapView
+import '../map_view.dart';
+import '../../../../data/models/product_model.dart'; // Pastikan import model benar
 
-class HomeFragment extends StatelessWidget {
-  final controller = Get.find<HomeController>();
-
+// UBAH JADI STATEFUL WIDGET UNTUK ANIMASI EXPLICIT (CONTROLLER)
+class HomeFragment extends StatefulWidget {
   HomeFragment({super.key});
+
+  @override
+  State<HomeFragment> createState() => _HomeFragmentState();
+}
+
+class _HomeFragmentState extends State<HomeFragment> with SingleTickerProviderStateMixin {
+  final controller = Get.find<HomeController>();
+  
+  // --- ANIMASI 1: EXPLICIT (Pulsing Text) ---
+  late AnimationController _animController;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    // Membuat controller animasi berulang (reverse)
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..repeat(reverse: true);
+
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,10 +49,10 @@ class HomeFragment extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: GestureDetector( // BISA DIKLIK KE PETA
+        title: GestureDetector(
           onTap: () => !controller.isAdmin.value ? Get.to(() => MapView()) : null,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start, 
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
@@ -31,40 +62,41 @@ class HomeFragment extends StatelessWidget {
                           fontSize: 10,
                           color: controller.isAdmin.value ? Colors.red : Colors.grey))),
                   const SizedBox(width: 5),
-                  // Indikator Sumber Lokasi (Network/GPS)
-                  Obx(() => !controller.isAdmin.value 
-                    ? Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: controller.locationSource.value.contains("GPS") 
-                            ? Colors.green.shade100 : Colors.orange.shade100,
-                          borderRadius: BorderRadius.circular(4)
-                        ),
-                        child: Text(controller.locationSource.value, 
-                          style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold,
-                            color: controller.locationSource.value.contains("GPS") 
-                            ? Colors.green : Colors.deepOrange
-                          )),
-                      )
-                    : const SizedBox()
-                  ),
+                  Obx(() => !controller.isAdmin.value
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: controller.locationSource.value.contains("GPS")
+                                ? Colors.green.shade100
+                                : Colors.orange.shade100,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(controller.locationSource.value,
+                              style: TextStyle(
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold,
+                                  color: controller.locationSource.value.contains("GPS")
+                                      ? Colors.green
+                                      : Colors.deepOrange)),
+                        )
+                      : const SizedBox()),
                 ],
               ),
               Row(children: [
                 const Icon(Icons.location_on, size: 14, color: Colors.blue),
                 const SizedBox(width: 4),
-                // Menampilkan Koordinat/Alamat
                 Obx(() => Text(
-                  controller.address.value.length > 25 
-                    ? "${controller.address.value.substring(0, 25)}..." 
-                    : controller.address.value,
+                    controller.address.value.length > 25
+                        ? "${controller.address.value.substring(0, 25)}..."
+                        : controller.address.value,
                     style: TextStyle(
                         fontSize: 12,
                         color: Colors.blue.shade800,
                         fontWeight: FontWeight.bold))),
                 const Icon(Icons.arrow_drop_down, color: Colors.blue, size: 18)
               ]),
-            ]),
+            ],
+          ),
         ),
         actions: [
           Obx(() => !controller.isAdmin.value
@@ -81,7 +113,6 @@ class HomeFragment extends StatelessWidget {
               : const SizedBox()),
         ],
       ),
-      // ... (SISA KODE BODY SAMA SEPERTI YANG KAMU KIRIM) ...
       body: RefreshIndicator(
         onRefresh: () async => controller.fetchProducts(),
         child: SingleChildScrollView(
@@ -112,66 +143,7 @@ class HomeFragment extends StatelessWidget {
                   itemCount: controller.products.length,
                   itemBuilder: (context, index) {
                     final product = controller.products[index];
-                    // ... (LOGIC ITEM BUILDER TETAP SAMA) ...
-                    // Pastikan kode tampilan produk tetap sama
-                    return Container(
-                      decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(15),
-                          boxShadow: [
-                            BoxShadow(color: Colors.grey.shade100, blurRadius: 5)
-                          ]),
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                                child: ClipRRect(
-                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-                                    child: Image.network(
-                                        product.imageUrl ?? "https://placehold.co/400x300/png?text=Menu",
-                                        fit: BoxFit.cover,
-                                        width: double.infinity,
-                                        errorBuilder: (c, o, s) => Container(
-                                            color: Colors.grey.shade200,
-                                            child: const Icon(Icons.broken_image))))),
-                            Padding(
-                                padding: const EdgeInsets.all(10.0),
-                                child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(product.name,
-                                          style: const TextStyle(fontWeight: FontWeight.bold),
-                                          maxLines: 1),
-                                      Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                                NumberFormat.currency(locale: 'id', symbol: 'Rp ', decimalDigits: 0).format(product.price),
-                                                style: TextStyle(color: Colors.blue.shade700, fontWeight: FontWeight.bold)),
-                                            InkWell(
-                                                onTap: () => controller.isAdmin.value
-                                                    ? Get.defaultDialog(
-                                                        title: "Hapus?",
-                                                        textConfirm: "Ya",
-                                                        onConfirm: () {
-                                                          Get.back();
-                                                          controller.deleteProduct(product.id);
-                                                        })
-                                                    : controller.addToCart(product),
-                                                child: Container(
-                                                    padding: const EdgeInsets.all(6),
-                                                    decoration: BoxDecoration(
-                                                        color: controller.isAdmin.value ? Colors.red.shade100 : Colors.blue,
-                                                        borderRadius: BorderRadius.circular(8)),
-                                                    child: Icon(
-                                                        controller.isAdmin.value ? Icons.delete : Icons.add,
-                                                        size: 16,
-                                                        color: controller.isAdmin.value ? Colors.red : Colors.white)
-                                                ))
-                                          ])
-                                    ]))
-                          ]),
-                    );
+                    return _buildProductCard(product);
                   },
                 );
               }),
@@ -183,9 +155,89 @@ class HomeFragment extends StatelessWidget {
     );
   }
 
+  Widget _buildProductCard(Product product) {
+    return Container(
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(color: Colors.grey.shade100, blurRadius: 5)
+          ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () => _showDetailDialog(product), // KLIK GAMBAR -> DETAIL
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                child: Hero( // --- ANIMASI 2: HERO (IMPLICIT/FRAMEWORK) ---
+                  tag: 'product_image_${product.id}',
+                  child: Image.network(
+                    product.imageUrl ?? "https://placehold.co/400x300/png?text=Menu",
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    errorBuilder: (c, o, s) => Container(
+                        color: Colors.grey.shade200,
+                        child: const Icon(Icons.broken_image)),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(10.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(product.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    maxLines: 1),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                        NumberFormat.currency(locale: 'id', symbol: 'Rp ', decimalDigits: 0)
+                            .format(product.price),
+                        style: TextStyle(
+                            color: Colors.blue.shade700, fontWeight: FontWeight.bold)),
+                    InkWell(
+                      onTap: () => controller.isAdmin.value
+                          ? Get.defaultDialog(
+                              title: "Hapus?",
+                              textConfirm: "Ya",
+                              onConfirm: () {
+                                Get.back();
+                                controller.deleteProduct(product.id);
+                              })
+                          : controller.addToCart(product),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                            color: controller.isAdmin.value
+                                ? Colors.red.shade100
+                                : Colors.blue,
+                            borderRadius: BorderRadius.circular(8)),
+                        child: Icon(
+                            controller.isAdmin.value ? Icons.delete : Icons.add,
+                            size: 16,
+                            color: controller.isAdmin.value
+                                ? Colors.red
+                                : Colors.white),
+                      ),
+                    )
+                  ],
+                )
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPromoBanner() {
-      // ... (KODE BANNER TETAP SAMA) ...
-      return Container(
+    return Container(
       height: 160,
       margin: const EdgeInsets.all(16),
       width: double.infinity,
@@ -212,11 +264,16 @@ class HomeFragment extends StatelessWidget {
                               color: Colors.white,
                               fontWeight: FontWeight.bold))),
                   const SizedBox(height: 10),
-                  Text("DISKON 50%",
-                      style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 28)),
+                  
+                  // --- PENERAPAN ANIMASI EXPLICIT ---
+                  ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: Text("DISKON 50%",
+                        style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 28)),
+                  ),
                 ])),
         Positioned(
             right: -20,
@@ -224,6 +281,67 @@ class HomeFragment extends StatelessWidget {
             child: Icon(Icons.fastfood,
                 size: 150, color: Colors.white.withOpacity(0.15)))
       ]),
+    );
+  }
+
+  // Dialog Detail dengan Hero Animation
+  void _showDetailDialog(Product product) {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              child: Hero(
+                tag: 'product_image_${product.id}', // Tag harus sama agar animasi jalan
+                child: Image.network(
+                  product.imageUrl ?? "https://placehold.co/400x300",
+                  height: 250,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(product.name,
+                      style: GoogleFonts.poppins(
+                          fontSize: 22, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 5),
+                   Text(
+                        NumberFormat.currency(locale: 'id', symbol: 'Rp ', decimalDigits: 0)
+                            .format(product.price),
+                        style: TextStyle(
+                            color: Colors.blue.shade700, 
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 15),
+                  const Text("Deskripsi:", style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text(product.description, style: const TextStyle(color: Colors.grey)),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      Get.back(); // Tutup dialog
+                      controller.addToCart(product); // Tambah ke keranjang
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue.shade800,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
+                    ),
+                    child: const Text("Tambah ke Keranjang"),
+                  )
+                ],
+              ),
+            )
+          ],
+        ),
+      ),
     );
   }
 }
