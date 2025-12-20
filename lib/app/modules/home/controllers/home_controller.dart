@@ -1,12 +1,14 @@
 import 'dart:async';
+import 'dart:convert'; 
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'; // Untuk kIsWeb
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart' as latLng;
+import 'package:http/http.dart' as http;
 import '../../../data/models/product_model.dart';
 import '../../auth/views/login_view.dart';
 import '../../../services/notification_service.dart';
@@ -25,12 +27,12 @@ class HomeController extends GetxController {
   var totalRevenue = 0.0.obs;
   var totalOrdersCount = 0.obs;
 
-  // --- NAVIGASI (YANG SEMPAT HILANG) ---
+  // --- NAVIGASI ---
   var tabIndex = 0.obs;
 
   // --- LOKASI & MAP ---
   var address = "Mencari lokasi...".obs;
-  var locationSource = "Mencari...".obs; // GPS atau Network
+  var locationSource = "Mencari...".obs;
   var distanceKm = 0.0.obs;
 
   // Posisi Toko (Tetap)
@@ -41,14 +43,14 @@ class HomeController extends GetxController {
   var currentLat = 0.0.obs;
   var currentLng = 0.0.obs;
 
-  // Posisi Pin Pilihan User (Untuk pengiriman)
+  // Posisi Pin Pilihan User
   var selectedLat = 0.0.obs;
   var selectedLng = 0.0.obs;
 
-  // State Pilihan Pengiriman (Delivery vs Pickup)
+  // State Pilihan Pengiriman
   var isDelivery = true.obs;
 
-  // Stream untuk Live Location
+  // Stream Live Location
   StreamSubscription<Position>? _positionStream;
 
   // --- ADMIN UPLOAD FORM ---
@@ -69,21 +71,19 @@ class HomeController extends GetxController {
   void onInit() {
     super.onInit();
     checkRole();
-    fetchProducts();
-    fetchOrders(); // Load order awal
-    _startLiveLocation(); // Mulai tracking
+    fetchProducts(); 
+    fetchOrders();
+    _startLiveLocation();
   }
 
   @override
   void onClose() {
-    _positionStream?.cancel(); // Matikan stream saat close
+    _positionStream?.cancel();
     super.onClose();
   }
 
-  // --- FUNGSI NAVIGASI ---
   void changeTab(int index) {
     tabIndex.value = index;
-    // Refresh data order jika masuk tab Riwayat (1) atau Profil (4)
     if (index == 1 || index == 4) fetchOrders();
   }
 
@@ -105,13 +105,43 @@ class HomeController extends GetxController {
     Get.offAll(() => LoginView());
   }
 
+  // --- IMPLEMENTASI MODUL 3: API PUBLIK ---
+  Future<List<String>> fetchExternalDessertImages() async {
+    try {
+      final url = Uri.parse(
+          'https://www.themealdb.com/api/json/v1/1/filter.php?c=Dessert');
+      
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final meals = data['meals'] as List;
+        return meals.map<String>((m) => m['strMealThumb'] as String).toList();
+      }
+    } catch (e) {
+      print("Gagal ambil API Public: $e");
+    }
+    return [];
+  }
+
   // --- FUNGSI PRODUK (CRUD) ---
   void fetchProducts() async {
     try {
       isLoading.value = true;
       final response = await supabase.from('products').select().order('id');
+      final apiImages = await fetchExternalDessertImages();
       final data = response as List<dynamic>;
-      products.value = data.map((e) => Product.fromJson(e)).toList();
+      products.value = data.asMap().entries.map((entry) {
+        int index = entry.key;
+        var productJson = entry.value;
+
+        if (apiImages.isNotEmpty) {
+          productJson['image_url'] = apiImages[index % apiImages.length];
+        }
+
+        return Product.fromJson(productJson);
+      }).toList();
+
     } catch (e) {
       print("Error product: $e");
     } finally {
@@ -124,7 +154,7 @@ class HomeController extends GetxController {
     try {
       isLoading.value = true;
       String? imageUrl;
-      // Upload Logic
+      // Upload Logic ke Supabase Storage
       if (webImage.value != null) {
         final fileName =
             '${DateTime.now().millisecondsSinceEpoch}.$_imageExtension';
@@ -142,7 +172,7 @@ class HomeController extends GetxController {
         'image_url': imageUrl,
         'category': 'base',
       });
-      fetchProducts();
+      fetchProducts(); 
       Get.back();
       _resetForm();
       Get.snackbar("Sukses", "Menu berhasil ditambah!");
@@ -218,13 +248,9 @@ class HomeController extends GetxController {
 
   void addToCart(Product product) => cart.add(product);
 
-  // --- LOGIKA PEMBAYARAN (REVISI: PICKUP vs DELIVERY) ---
   void showPaymentDialog() {
     if (cart.isEmpty) return;
-
-    // Reset toggle ke Delivery setiap kali dialog dibuka
     isDelivery.value = true;
-
     Get.bottomSheet(
       Container(
         padding: const EdgeInsets.all(20),
@@ -232,9 +258,7 @@ class HomeController extends GetxController {
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
         child: Obx(() {
-          // Hitung
           int totalMenu = cart.fold(0, (sum, item) => sum + item.price);
-          // Ongkir 0 jika Pickup, Hitung jika Delivery
           int ongkir = isDelivery.value ? (distanceKm.value * 2000).ceil() : 0;
           int grandTotal = totalMenu + ongkir;
 
@@ -246,8 +270,6 @@ class HomeController extends GetxController {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center),
               const SizedBox(height: 20),
-
-              // Toggle Button
               Container(
                 decoration: BoxDecoration(
                   color: Colors.grey.shade200,
@@ -261,8 +283,6 @@ class HomeController extends GetxController {
                 ),
               ),
               const SizedBox(height: 20),
-
-              // Rincian
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                 const Text("Total Menu"),
                 Text("Rp $totalMenu"),
@@ -288,8 +308,6 @@ class HomeController extends GetxController {
                         color: Colors.blue.shade800)),
               ]),
               const SizedBox(height: 20),
-
-              // Tombol Bayar
               const Text("Metode Pembayaran:",
                   style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
@@ -365,17 +383,13 @@ class HomeController extends GetxController {
       cart.clear();
       fetchOrders();
 
-      NotificationService().showNotification(
-        "Pesanan Diproses", 
-        "Terima kasih! Pesanan martabakmu sedang disiapkan oleh Pak Zaini."
-      );
+      NotificationService().showNotification("Pesanan Diproses",
+          "Terima kasih! Pesanan martabakmu sedang disiapkan oleh Pak Zaini.");
 
       if (isDelivery.value) {
         Future.delayed(const Duration(seconds: 10), () {
-          NotificationService().showNotification(
-            "Pesanan Sedang Diantar", 
-            "Kurir sedang menuju ke lokasimu. Siapkan uang pas ya!"
-          );
+          NotificationService().showNotification("Pesanan Sedang Diantar",
+              "Kurir sedang menuju ke lokasimu. Siapkan uang pas ya!");
         });
       }
 
