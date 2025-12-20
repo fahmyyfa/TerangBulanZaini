@@ -1,6 +1,7 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
+import '../modules/home/controllers/home_controller.dart';
 
 class NotificationService {
   // Singleton Pattern
@@ -11,7 +12,6 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
-  // Inisialisasi Local Notification
   Future<void> initLocalNotification() async {
     // Android Settings
     const AndroidInitializationSettings initializationSettingsAndroid =
@@ -29,14 +29,21 @@ class NotificationService {
     await flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        print("Notifikasi diklik: ${response.payload}");
+        if (Get.isRegistered<HomeController>()) {
+          final payload = response.payload ?? "Info|Ada notifikasi baru";
+          final parts = payload.split('|');
+          final title = parts.isNotEmpty ? parts[0] : "Info";
+          
+          final body = parts.length > 1 ? parts.sublist(1).join('|') : "";
+          
+          Get.find<HomeController>().handleNotificationTap(title, body);
+        }
       },
     );
   }
- 
+
   Future<void> initFCM() async {
     FirebaseMessaging messaging = FirebaseMessaging.instance;
-
     NotificationSettings settings = await messaging.requestPermission(
       alert: true,
       badge: true,
@@ -64,7 +71,8 @@ class NotificationService {
   }
 
   Future<void> showNotification(String title, String body) async {
-    const String soundFileName = 'chuaksss.mp3';
+    const String soundFileName = 'chuaksss'; 
+    
     final AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
       'channel_id_terang_bulan_v2',
@@ -73,7 +81,6 @@ class NotificationService {
       importance: Importance.max,
       priority: Priority.high,
       ticker: 'ticker',
-
       playSound: true,
       sound: RawResourceAndroidNotificationSound(soundFileName),
     );
@@ -86,7 +93,7 @@ class NotificationService {
       title,
       body,
       platformChannelSpecifics,
-      payload: 'data_payload',
+      payload: "$title|$body", 
     );
   }
 }
