@@ -1,5 +1,5 @@
-import 'dart:io'; // Tetap butuh ini untuk kIsWeb check
-import 'package:flutter/foundation.dart'; // PENTING: Untuk kIsWeb
+import 'dart:io'; 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/home_controller.dart';
@@ -65,7 +65,6 @@ class AdminView extends StatelessWidget {
       title: "Tambah Menu Baru",
       content: Column(
         children: [
-          // --- LOGIKA CERDAS PREVIEW GAMBAR ---
           Obx(() {
             return GestureDetector(
               onTap: () => controller.pickImage(),
@@ -75,11 +74,10 @@ class AdminView extends StatelessWidget {
                     color: Colors.grey[100],
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: Colors.grey.shade300)),
-                child: _buildImagePreview(), // Panggil fungsi helper di bawah
+                child: _buildImagePreview(), 
               ),
             );
           }),
-          // ------------------------------------
 
           const SizedBox(height: 15),
           TextField(
@@ -106,21 +104,17 @@ class AdminView extends StatelessWidget {
     );
   }
 
-  // Helper untuk menampilkan gambar sesuai Platform (Web/HP)
   Widget _buildImagePreview() {
-    // 1. Jika ada gambar Web (Bytes) -> Tampilkan Memory
     if (kIsWeb && controller.webImage.value != null) {
       return ClipRRect(
           borderRadius: BorderRadius.circular(10),
           child: Image.memory(controller.webImage.value!, fit: BoxFit.cover));
     }
-    // 2. Jika ada gambar HP (File) & BUKAN Web -> Tampilkan File
     else if (!kIsWeb && controller.mobileImage.value != null) {
       return ClipRRect(
           borderRadius: BorderRadius.circular(10),
           child: Image.file(controller.mobileImage.value!, fit: BoxFit.cover));
     }
-    // 3. Jika belum ada gambar -> Tampilkan Icon
     else {
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,

@@ -17,10 +17,10 @@ class QrisFragment extends StatelessWidget {
                   boxShadow: [
                     BoxShadow(blurRadius: 10, color: Colors.black12)
                   ]),
-              child: const Icon(Icons.qr_code_2, size: 250), // Simulasi QR
+              child: const Icon(Icons.qr_code_2, size: 250),
             ),
             const SizedBox(height: 20),
-            const Text("Tunjukkan ke Kasir",
+            const Text("Bayar Melalui QR Berikut",
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const Text("Saldo Point: 0", style: TextStyle(color: Colors.grey)),
           ],

@@ -5,9 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:badges/badges.dart' as badges;
 import '../../controllers/home_controller.dart';
 import '../map_view.dart';
-import '../../../../data/models/product_model.dart'; // Pastikan import model benar
+import '../../../../data/models/product_model.dart'; 
 
-// UBAH JADI STATEFUL WIDGET UNTUK ANIMASI EXPLICIT (CONTROLLER)
 class HomeFragment extends StatefulWidget {
   HomeFragment({super.key});
 
@@ -18,14 +17,12 @@ class HomeFragment extends StatefulWidget {
 class _HomeFragmentState extends State<HomeFragment> with SingleTickerProviderStateMixin {
   final controller = Get.find<HomeController>();
   
-  // --- ANIMASI 1: EXPLICIT (Pulsing Text) ---
   late AnimationController _animController;
   late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
-    // Membuat controller animasi berulang (reverse)
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -107,7 +104,7 @@ class _HomeFragmentState extends State<HomeFragment> with SingleTickerProviderSt
                         style: const TextStyle(color: Colors.white, fontSize: 10)),
                     child: IconButton(
                         icon: Icon(Icons.shopping_cart, color: Colors.blue.shade800),
-                        onPressed: () => controller.showPaymentDialog()),
+                        onPressed: () => controller.showCartDetails()),
                   ),
                 )
               : const SizedBox()),
@@ -168,10 +165,10 @@ class _HomeFragmentState extends State<HomeFragment> with SingleTickerProviderSt
         children: [
           Expanded(
             child: GestureDetector(
-              onTap: () => _showDetailDialog(product), // KLIK GAMBAR -> DETAIL
+              onTap: () => _showDetailDialog(product),
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-                child: Hero( // --- ANIMASI 2: HERO (IMPLICIT/FRAMEWORK) ---
+                child: Hero(
                   tag: 'product_image_${product.id}',
                   child: Image.network(
                     product.imageUrl ?? "https://placehold.co/400x300/png?text=Menu",
@@ -193,6 +190,7 @@ class _HomeFragmentState extends State<HomeFragment> with SingleTickerProviderSt
                 Text(product.name,
                     style: const TextStyle(fontWeight: FontWeight.bold),
                     maxLines: 1),
+                const SizedBox(height: 5),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -200,32 +198,62 @@ class _HomeFragmentState extends State<HomeFragment> with SingleTickerProviderSt
                         NumberFormat.currency(locale: 'id', symbol: 'Rp ', decimalDigits: 0)
                             .format(product.price),
                         style: TextStyle(
-                            color: Colors.blue.shade700, fontWeight: FontWeight.bold)),
-                    InkWell(
-                      onTap: () => controller.isAdmin.value
-                          ? Get.defaultDialog(
-                              title: "Hapus?",
-                              textConfirm: "Ya",
-                              onConfirm: () {
-                                Get.back();
-                                controller.deleteProduct(product.id);
-                              })
-                          : controller.addToCart(product),
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                            color: controller.isAdmin.value
-                                ? Colors.red.shade100
-                                : Colors.blue,
-                            borderRadius: BorderRadius.circular(8)),
-                        child: Icon(
-                            controller.isAdmin.value ? Icons.delete : Icons.add,
-                            size: 16,
-                            color: controller.isAdmin.value
-                                ? Colors.red
-                                : Colors.white),
-                      ),
-                    )
+                            color: Colors.blue.shade700, fontWeight: FontWeight.bold, fontSize: 12)),
+                    
+                    // Logika Tombol Admin vs User
+                    controller.isAdmin.value
+                        ? InkWell(
+                            onTap: () => Get.defaultDialog(
+                                title: "Hapus?",
+                                textConfirm: "Ya",
+                                onConfirm: () {
+                                  Get.back();
+                                  controller.deleteProduct(product.id);
+                                }),
+                            child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(color: Colors.red.shade100, borderRadius: BorderRadius.circular(8)),
+                                child: const Icon(Icons.delete, size: 16, color: Colors.red)),
+                          )
+                        : Obx(() {
+                            int qty = controller.getQuantity(product.id);
+                            
+                            if (qty == 0) {
+                                return InkWell(
+                                  onTap: () => controller.addToCart(product),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(color: Colors.blue, borderRadius: BorderRadius.circular(8)),
+                                    child: const Icon(Icons.add, size: 16, color: Colors.white),
+                                  ),
+                                );
+                            } else {
+                                return Row(
+                                    children: [
+                                        InkWell(
+                                            onTap: () => controller.decreaseItem(product),
+                                            child: Container(
+                                                padding: const EdgeInsets.all(2),
+                                                decoration: BoxDecoration(color: Colors.red.shade100, borderRadius: BorderRadius.circular(4)),
+                                                child: const Icon(Icons.remove, size: 14, color: Colors.red),
+                                            ),
+                                        ),
+                                        Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                                            child: Text("$qty", style: const TextStyle(fontWeight: FontWeight.bold)),
+                                        ),
+                                        InkWell(
+                                            onTap: () => controller.addToCart(product),
+                                            child: Container(
+                                                padding: const EdgeInsets.all(2),
+                                                decoration: BoxDecoration(color: Colors.green.shade100, borderRadius: BorderRadius.circular(4)),
+                                                child: const Icon(Icons.add, size: 14, color: Colors.green),
+                                            ),
+                                        ),
+                                    ],
+                                );
+                            }
+                          }),
                   ],
                 )
               ],
@@ -265,7 +293,7 @@ class _HomeFragmentState extends State<HomeFragment> with SingleTickerProviderSt
                               fontWeight: FontWeight.bold))),
                   const SizedBox(height: 10),
                   
-                  // --- PENERAPAN ANIMASI EXPLICIT ---
+                  // ANIMASI EXPLICIT
                   ScaleTransition(
                     scale: _scaleAnimation,
                     child: Text("DISKON 50%",
@@ -284,7 +312,6 @@ class _HomeFragmentState extends State<HomeFragment> with SingleTickerProviderSt
     );
   }
 
-  // Dialog Detail dengan Hero Animation
   void _showDetailDialog(Product product) {
     Get.dialog(
       Dialog(
@@ -296,7 +323,7 @@ class _HomeFragmentState extends State<HomeFragment> with SingleTickerProviderSt
             ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
               child: Hero(
-                tag: 'product_image_${product.id}', // Tag harus sama agar animasi jalan
+                tag: 'product_image_${product.id}', 
                 child: Image.network(
                   product.imageUrl ?? "https://placehold.co/400x300",
                   height: 250,
@@ -326,8 +353,8 @@ class _HomeFragmentState extends State<HomeFragment> with SingleTickerProviderSt
                   const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: () {
-                      Get.back(); // Tutup dialog
-                      controller.addToCart(product); // Tambah ke keranjang
+                      Get.back(); 
+                      controller.addToCart(product); 
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue.shade800,

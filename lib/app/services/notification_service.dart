@@ -11,13 +11,13 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
-  // --- 1. Inisialisasi Local Notification ---
+  // Inisialisasi Local Notification
   Future<void> initLocalNotification() async {
     // Android Settings
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    // iOS Settings (Opsional)
+    // iOS Settings
     const DarwinInitializationSettings initializationSettingsDarwin =
         DarwinInitializationSettings();
 
@@ -29,13 +29,11 @@ class NotificationService {
     await flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        // Logika jika notifikasi diklik (misal: buka tab Riwayat)
         print("Notifikasi diklik: ${response.payload}");
       },
     );
   }
-
-  // --- 2. Inisialisasi FCM (Firebase Cloud Messaging) ---
+ 
   Future<void> initFCM() async {
     FirebaseMessaging messaging = FirebaseMessaging.instance;
 
@@ -84,7 +82,7 @@ class NotificationService {
         NotificationDetails(android: androidPlatformChannelSpecifics);
 
     await flutterLocalNotificationsPlugin.show(
-      DateTime.now().millisecond, // ID unik berdasarkan waktu
+      DateTime.now().millisecond, 
       title,
       body,
       platformChannelSpecifics,

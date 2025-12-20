@@ -26,16 +26,72 @@ class ProfileFragment extends StatelessWidget {
                   radius: 50,
                   backgroundColor: Colors.white,
                   child: Icon(Icons.person, size: 50, color: Colors.blue)),
+              const SizedBox(height: 15),
+              
+              // TAMPILKAN EMAIL & NAMA DARI REGISTER 
+              Obx(() {
+                 String displayName = "User";
+                 if (controller.userEmail.value.contains("@")) {
+                   displayName = controller.userEmail.value.split("@")[0];
+                   displayName = displayName[0].toUpperCase() + displayName.substring(1);
+                 }
+
+                 return Column(
+                   children: [
+                     Text(displayName, // Nama
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 22)),
+                     const SizedBox(height: 5),
+                     Text(controller.userEmail.value, // Email Asli
+                        style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14)),
+                   ],
+                 );
+              }),
+              
               const SizedBox(height: 10),
-              Obx(() => Text(
+              Obx(() => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: controller.isAdmin.value ? Colors.red : Colors.amber,
+                  borderRadius: BorderRadius.circular(20)
+                ),
+                child: Text(
                   controller.isAdmin.value ? "ADMINISTRATOR" : "MEMBER SETIA",
                   style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
-                      fontSize: 18))),
+                      fontSize: 12)),
+              )),
             ]),
           ),
+          
           const SizedBox(height: 20),
+          
+          // INFORMASI AKUN 
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    _buildInfoRow(Icons.calendar_today, "Bergabung Sejak", controller.joinDate),
+                    const Divider(),
+                    _buildInfoRow(Icons.verified_user, "Status Akun", "Terverifikasi".obs),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 20),
+          
           Obx(() {
             if (controller.isAdmin.value) {
               return Padding(
@@ -101,7 +157,22 @@ class ProfileFragment extends StatelessWidget {
                           backgroundColor: Colors.red.shade50,
                           foregroundColor: Colors.red,
                           padding: const EdgeInsets.symmetric(vertical: 15))))),
+          const SizedBox(height: 30),
         ]),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, RxString value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.blue.shade300, size: 20),
+          const SizedBox(width: 15),
+          Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w500))),
+          Obx(() => Text(value.value, style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey.shade700))),
+        ],
       ),
     );
   }

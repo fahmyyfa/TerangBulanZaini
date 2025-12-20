@@ -53,7 +53,7 @@ class MapView extends StatelessWidget {
                     Marker(
                       point: userPos,
                       width: 50, height: 50,
-                      child: const Icon(Icons.my_location, color: Colors.blue, size: 30), // Ikon user
+                      child: const Icon(Icons.my_location, color: Colors.blue, size: 30), 
                     ),
                     Marker(
                       point: pinPos,

@@ -4,7 +4,7 @@ class Product {
   final String category;
   final int price;
   final String? imageUrl;
-  final String description; // Kolom Baru
+  final String description; 
 
   Product({
     required this.id,
@@ -12,7 +12,7 @@ class Product {
     required this.category,
     required this.price,
     this.imageUrl,
-    this.description = 'Rasa otentik khas Pak Zaini', // Default jika kosong
+    this.description = 'Rasa otentik khas Pak Zaini', 
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
@@ -22,7 +22,6 @@ class Product {
       category: json['category'],
       price: json['price'],
       imageUrl: json['image_url'],
-      // Pastikan menangani null agar tidak error
       description: json['description'] ?? 'Rasa otentik khas Pak Zaini',
     );
   }

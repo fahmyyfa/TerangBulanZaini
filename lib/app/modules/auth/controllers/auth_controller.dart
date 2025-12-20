@@ -26,7 +26,6 @@ class AuthController extends GetxController {
       Get.snackbar("Login Berhasil", "Selamat datang!",
           backgroundColor: Colors.green.shade100);
 
-      // SEMUA user (Admin/Member) masuk ke HomeView
       Get.offAll(() => HomeView());
     } on AuthException catch (e) {
       Get.snackbar("Gagal Login", e.message,
