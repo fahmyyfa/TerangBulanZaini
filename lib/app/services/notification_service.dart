@@ -39,7 +39,6 @@ class NotificationService {
   Future<void> initFCM() async {
     FirebaseMessaging messaging = FirebaseMessaging.instance;
 
-    // Request Permission (Penting untuk Android 13+)
     NotificationSettings settings = await messaging.requestPermission(
       alert: true,
       badge: true,
@@ -48,13 +47,16 @@ class NotificationService {
 
     print('User granted permission: ${settings.authorizationStatus}');
 
-    // Handler saat aplikasi dibuka (Foreground)
+    String? token = await messaging.getToken();
+    print("========================================");
+    print("FCM TOKEN SAYA: $token");
+    print("========================================");
+
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       print('Got a message whilst in the foreground!');
       print('Message data: ${message.data}');
 
       if (message.notification != null) {
-        // Tampilkan sebagai Local Notification saat aplikasi dibuka
         showNotification(
           message.notification!.title ?? 'Info',
           message.notification!.body ?? 'Ada pesan baru',
@@ -63,19 +65,22 @@ class NotificationService {
     });
   }
 
-  // --- 3. Fungsi Menampilkan Notifikasi (Local) ---
   Future<void> showNotification(String title, String body) async {
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+    const String soundFileName = 'chuaksss.mp3';
+    final AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
-      'channel_id_terang_bulan', // ID Channel unik
-      'Order Notifications', // Nama Channel
-      channelDescription: 'Notifikasi status pesanan',
+      'channel_id_terang_bulan_v2',
+      'Pesanan & Promo', 
+      channelDescription: 'Notifikasi status pesanan suara custom',
       importance: Importance.max,
       priority: Priority.high,
-      showWhen: true,
+      ticker: 'ticker',
+
+      playSound: true,
+      sound: RawResourceAndroidNotificationSound(soundFileName),
     );
 
-    const NotificationDetails platformChannelSpecifics =
+    final NotificationDetails platformChannelSpecifics =
         NotificationDetails(android: androidPlatformChannelSpecifics);
 
     await flutterLocalNotificationsPlugin.show(
@@ -83,7 +88,7 @@ class NotificationService {
       title,
       body,
       platformChannelSpecifics,
-      payload: 'item x',
+      payload: 'data_payload',
     );
   }
 }

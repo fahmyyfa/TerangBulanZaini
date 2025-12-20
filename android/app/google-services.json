@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "858215284680",
+    "project_id": "praktikum-mobile-f9598",
+    "storage_bucket": "praktikum-mobile-f9598.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:858215284680:android:043a236b4c15084888cafd",
+        "android_client_info": {
+          "package_name": "com.example.terang_bulan_zaini"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyABz-5HCuAi6R8HT4tyd-8gvT_gBTIHQN8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
