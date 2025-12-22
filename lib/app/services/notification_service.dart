@@ -33,54 +33,58 @@ class NotificationService {
           final payload = response.payload ?? "Info|Ada notifikasi baru";
           final parts = payload.split('|');
           final title = parts.isNotEmpty ? parts[0] : "Info";
-          
           final body = parts.length > 1 ? parts.sublist(1).join('|') : "";
           
           Get.find<HomeController>().handleNotificationTap(title, body);
         }
       },
     );
+
+    final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+      flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+
+    if (androidImplementation != null) {
+      await androidImplementation.requestNotificationsPermission();
+    }
   }
 
   Future<void> initFCM() async {
     FirebaseMessaging messaging = FirebaseMessaging.instance;
-    NotificationSettings settings = await messaging.requestPermission(
+    await messaging.requestPermission(
       alert: true,
       badge: true,
       sound: true,
     );
-
-    print('User granted permission: ${settings.authorizationStatus}');
 
     String? token = await messaging.getToken();
     print("========================================");
     print("FCM TOKEN SAYA: $token");
     print("========================================");
 
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print('Got a message whilst in the foreground!');
-      print('Message data: ${message.data}');
 
+    await messaging.subscribeToTopic('promo');
+
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       if (message.notification != null) {
         showNotification(
           message.notification!.title ?? 'Info',
-          message.notification!.body ?? 'Ada pesan baru',
+          message.notification!.body ?? 'Pesan baru',
         );
       }
     });
   }
 
   Future<void> showNotification(String title, String body) async {
-    const String soundFileName = 'chuaksss'; 
+    const String soundFileName = 'pesanan'; 
     
     final AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
-      'channel_id_terang_bulan_v2',
-      'Pesanan & Promo', 
-      channelDescription: 'Notifikasi status pesanan suara custom',
+      'channel_teranis_Baru', 
+      'Notifications Pemesanan ', 
+      channelDescription: 'Notifikasi status pesanan',
       importance: Importance.max,
       priority: Priority.high,
-      ticker: 'ticker',
       playSound: true,
       sound: RawResourceAndroidNotificationSound(soundFileName),
     );

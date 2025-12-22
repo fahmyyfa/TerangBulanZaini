@@ -7,11 +7,10 @@ import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:latlong2/latlong.dart' as latLng;
 import 'package:http/http.dart' as http;
-import 'package:firebase_messaging/firebase_messaging.dart'; // Wajib untuk FCM
-
-// Pastikan import model dan view lain sesuai path Anda
+import 'package:firebase_messaging/firebase_messaging.dart'; 
 import '../../../data/models/product_model.dart';
 import '../../auth/views/login_view.dart';
 import '../../../services/notification_service.dart';
@@ -19,30 +18,30 @@ import '../../../services/notification_service.dart';
 class HomeController extends GetxController {
   final supabase = Supabase.instance.client;
 
-  // --- DATA UTAMA ---
+  // DATA UTAMA
   var products = <Product>[].obs;
   var cart = <Product>[].obs;
   var myOrders = <Map<String, dynamic>>[].obs;
   var isLoading = true.obs;
   var isAdmin = false.obs;
 
-  // --- DATA USER ---
+  // DATA USER
   var userEmail = "Loading...".obs;
   var joinDate = "-".obs;
 
-  // --- ANALISIS ADMIN ---
+  // ANALISIS ADMIN
   var totalRevenue = 0.0.obs;
   var totalOrdersCount = 0.obs;
 
-  // --- NAVIGASI ---
+  // NAVIGASI
   var tabIndex = 0.obs;
 
-  // --- LOKASI & MAP ---
+  // LOKASI & MAP 
   var address = "Mencari lokasi...".obs;
   var locationSource = "Mencari...".obs;
   var distanceKm = 0.0.obs;
 
-  final double shopLat = -7.9826; // Koordinat Toko (Malang)
+  final double shopLat = -7.9826; // Koordinat Toko
   final double shopLng = 112.6308;
 
   var currentLat = 0.0.obs;
@@ -67,18 +66,11 @@ class HomeController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // 1. Cek User & Role
     checkRole();
     loadUserProfile();
-    
-    // 2. Ambil Data
     fetchProducts();
     fetchOrders();
-    
-    // 3. Nyalakan Lokasi
     _startLiveLocation();
-    
-    // 4. Setup Listener Notifikasi (Interaksi Background/Terminated)
     setupInteractedMessage();
   }
 
@@ -93,13 +85,8 @@ class HomeController extends GetxController {
     if (index == 1 || index == 4) fetchOrders();
   }
 
-  // =======================================================================
-  // 1. LOGIKA NOTIFIKASI INTERAKTIF (MODUL 6++)
-  // =======================================================================
-  
-  // Setup listener saat aplikasi mati/background
+  // LOGIKA NOTIFIKASI INTERAKTIF
   Future<void> setupInteractedMessage() async {
-    // A. Terminated (Aplikasi mati -> Klik notif -> Buka app)
     RemoteMessage? initialMessage =
         await FirebaseMessaging.instance.getInitialMessage();
     
@@ -109,7 +96,6 @@ class HomeController extends GetxController {
       });
     }
 
-    // B. Background (Aplikasi minimize -> Klik notif -> Buka app)
     FirebaseMessaging.onMessageOpenedApp.listen(_handleFCMMessage);
   }
 
@@ -122,12 +108,9 @@ class HomeController extends GetxController {
     }
   }
 
-  // Dipanggil dari NotificationService (Foreground) & FCM (Background)
   void handleNotificationTap(String title, String body) {
-    // 1. Pindah ke Tab Notifikasi
-    tabIndex.value = 3; 
+        tabIndex.value = 3; 
     
-    // 2. Munculkan Popup Detail
     Future.delayed(const Duration(milliseconds: 500), () {
       bool isPromo = title.toLowerCase().contains("diskon") || 
                      title.toLowerCase().contains("promo");
@@ -157,18 +140,16 @@ class HomeController extends GetxController {
         confirmTextColor: Colors.white,
         buttonColor: Colors.blue.shade800,
         onConfirm: () {
-          Get.back(); // Tutup popup
-          changeTab(0); // Ke Beranda
+          Get.back(); 
+          changeTab(0);
         },
         onCancel: () => Get.back(),
       );
     });
   }
 
-  // =======================================================================
-  // 2. USER & AUTH
-  // =======================================================================
-  
+  // USER & AUTH
+
   void loadUserProfile() {
     final user = supabase.auth.currentUser;
     if (user != null) {
@@ -192,27 +173,46 @@ class HomeController extends GetxController {
           .select('role')
           .eq('id', user.id)
           .maybeSingle();
-      if (data != null && data['role'] == 'admin') isAdmin.value = true;
+      if (data != null && data['role'] == 'admin') {
+        isAdmin.value = true;
+        await fetchAdminAnalytics();
+      } else {
+        isAdmin.value = false;
+      }
+
     }
   }
 
-  void logout() async {
+  Future<void> logout() async {
     await supabase.auth.signOut();
+
+    isAdmin.value = false;
+    userEmail.value = "Loading...";
+    joinDate.value = "-";
+    
+    cart.clear();      
+    myOrders.clear();  
+    totalRevenue.value = 0.0;
+    totalOrdersCount.value = 0;
+    
+    address.value = "Mencari lokasi...";
+    distanceKm.value = 0.0;
+    Get.delete<HomeController>(force: true);
     Get.offAll(() => LoginView());
   }
 
-  // =======================================================================
-  // 3. PRODUK & API PUBLIK (MODUL 3 & 4)
-  // =======================================================================
-  
   Future<List<String>> fetchExternalDessertImages() async {
     try {
-      final url = Uri.parse('https://www.themealdb.com/api/json/v1/1/filter.php?c=Dessert');
+      final url = Uri.parse('https://www.themealdb.com/api/json/v1/1/search.php?s=pancake');
+      
       final response = await http.get(url);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final meals = data['meals'] as List;
-        return meals.map<String>((m) => m['strMealThumb'] as String).toList();
+        
+        if (data['meals'] != null) {
+          final meals = data['meals'] as List;
+          return meals.map<String>((m) => m['strMealThumb'] as String).toList();
+        }
       }
     } catch (e) {
       print("Gagal ambil API Public: $e");
@@ -230,7 +230,6 @@ class HomeController extends GetxController {
       products.value = data.asMap().entries.map((entry) {
         int index = entry.key;
         var productJson = entry.value;
-        // Override gambar Supabase dengan gambar API Publik
         if (apiImages.isNotEmpty) {
           productJson['image_url'] = apiImages[index % apiImages.length];
         }
@@ -240,6 +239,28 @@ class HomeController extends GetxController {
       print("Error product: $e");
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  Future<void> fetchAdminAnalytics() async {
+    if (!isAdmin.value) return;
+
+    try {
+      final List<dynamic> response = await supabase
+          .from('orders')
+          .select('total_price');
+
+      double calculatedTotal = 0;
+
+      for (var item in response) {
+        calculatedTotal += (item['total_price'] as num).toDouble();
+      }
+
+      totalRevenue.value = calculatedTotal;
+      print("Total Pendapatan Terhitung: Rp $calculatedTotal");
+
+    } catch (e) {
+      print("Error fetching analytics: $e");
     }
   }
 
@@ -295,9 +316,7 @@ class HomeController extends GetxController {
     }
   }
 
-  // =======================================================================
-  // 4. KERANJANG & ORDER (FITUR TAMBAHAN)
-  // =======================================================================
+  // KERANJANG & ORDER
 
   void addToCart(Product product) => cart.add(product);
 
@@ -475,7 +494,6 @@ class HomeController extends GetxController {
     Get.back();
 
     try {
-      // 1. Buat List Item (Tanpa JSON Encode agar support jsonb)
       final uniqueItems = cart.toSet().toList();
       List<Map<String, dynamic>> itemsSummary = [];
       for (var item in uniqueItems) {
@@ -495,14 +513,14 @@ class HomeController extends GetxController {
         'payment_status': method == 'transfer' ? 'paid' : 'pending',
         'user_latitude': selectedLat.value,
         'user_longitude': selectedLng.value,
-        'items': itemsSummary,  // Menyimpan detail order
-        'shipping_cost': ongkir, // Menyimpan ongkir
+        'items': itemsSummary,  
+        'shipping_cost': ongkir,
       });
 
-      // 3. Reset Cart & Notifikasi
+      // Reset Cart & Notifikasi
       cart.clear();
       fetchOrders();
-      NotificationService().showNotification("Pesanan Diproses", "Terima kasih! Pesanan martabakmu sedang disiapkan.");
+      NotificationService().showNotification("Pesanan Diproses", "Terima kasih! Pesanan Terang Bulanmu sedang disiapkan.");
       
       if (isDelivery.value) {
         Future.delayed(const Duration(seconds: 10), () {
@@ -537,10 +555,21 @@ class HomeController extends GetxController {
     }
   }
 
-  // =======================================================================
-  // 5. LOKASI & PETA (MODUL 5)
-  // =======================================================================
-  
+  // UBAH KOORDINAT JADI NAMA JALAN
+  Future<void> _getAddressFromLatLong(double lat, double lng) async {
+    try {
+      List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
+      
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks[0];
+        address.value = "${place.street}, ${place.subLocality}";
+      } 
+    } catch (e) {
+      address.value = "${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)}";
+    }
+  }
+
+  // LIVE LOCATION DIUPDATE 
   void _startLiveLocation() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
@@ -556,7 +585,9 @@ class HomeController extends GetxController {
         return;
       }
     }
-    const LocationSettings locationSettings = LocationSettings(accuracy: LocationAccuracy.best, distanceFilter: 0);
+    
+    const LocationSettings locationSettings = LocationSettings(accuracy: LocationAccuracy.best, distanceFilter: 10);
+    
     _positionStream = Geolocator.getPositionStream(locationSettings: locationSettings).listen((Position position) {
       currentLat.value = position.latitude;
       currentLng.value = position.longitude;
@@ -568,9 +599,10 @@ class HomeController extends GetxController {
         selectedLat.value = position.latitude;
         selectedLng.value = position.longitude;
         _calculateDistance();
+        _getAddressFromLatLong(position.latitude, position.longitude);
       }
+      
       locationSource.value = position.accuracy < 20 ? "GPS (Akurasi Tinggi)" : "Network/WiFi (Estimasi)";
-      address.value = "${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}";
     });
   }
 
@@ -578,9 +610,12 @@ class HomeController extends GetxController {
     selectedLat.value = point.latitude;
     selectedLng.value = point.longitude;
     _calculateDistance();
-    address.value = "Pin: ${point.latitude.toStringAsFixed(4)}, ${point.longitude.toStringAsFixed(4)}";
+    
+    address.value = "Memuat alamat..."; 
+    _getAddressFromLatLong(point.latitude, point.longitude);
+    
     Get.back();
-    Get.snackbar("Lokasi Diupdate", "Jarak pengiriman diperbarui", backgroundColor: Colors.green.shade100, duration: const Duration(seconds: 1));
+    Get.snackbar("Lokasi Diupdate", "Titik pengiriman berhasil diubah", backgroundColor: Colors.green.shade100, duration: const Duration(seconds: 1));
   }
 
   void _calculateDistance() {

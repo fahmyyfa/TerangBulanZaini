@@ -102,12 +102,12 @@ class MapView extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
 
-                FloatingActionButton.small(
+                /*FloatingActionButton.small(
                   heroTag: "info_debug",
                   backgroundColor: Colors.blue.shade800, 
                   child: const Icon(Icons.question_mark, color: Colors.white),
                   onPressed: () => _showDebugInfo(),
-                ),
+                ),*/
               ],
             ),
           ),

@@ -18,23 +18,15 @@ class LoginView extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                padding: const EdgeInsets.all(25),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.blue.withOpacity(0.2),
-                      blurRadius: 25,
-                      offset: const Offset(0, 10),
-                    )
-                  ],
-                ),
-                child: Icon(Icons.cookie_outlined,
-                    size: 70, color: Colors.blue.shade800),
+              Container( 
+                  child: Image.asset(
+                    "assets/Terani's_Crop.png", 
+                    width: 200,        
+                    // height: 250,       
+                    fit: BoxFit.contain, 
+                  ),
               ),
-              const SizedBox(height: 30),
+              //const SizedBox(height: 10),
               Text(
                 "Terang Bulan\nPak Zaini",
                 textAlign: TextAlign.center,
@@ -43,13 +35,13 @@ class LoginView extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                     color: Colors.blue.shade900),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 5),
               Text(
                 "Nikmati kelezatan di setiap gigitan",
                 style:
                     GoogleFonts.poppins(fontSize: 14, color: Colors.blueGrey),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 30),
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 24, vertical: 32),

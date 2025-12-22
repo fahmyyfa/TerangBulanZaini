@@ -46,55 +46,80 @@ class _HomeFragmentState extends State<HomeFragment> with SingleTickerProviderSt
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: GestureDetector(
-          onTap: () => !controller.isAdmin.value ? Get.to(() => MapView()) : null,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Obx(() => Text(
-                      controller.isAdmin.value ? "Mode Admin" : "Lokasi Pengiriman:",
-                      style: TextStyle(
-                          fontSize: 10,
-                          color: controller.isAdmin.value ? Colors.red : Colors.grey))),
-                  const SizedBox(width: 5),
-                  Obx(() => !controller.isAdmin.value
-                      ? Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: controller.locationSource.value.contains("GPS")
-                                ? Colors.green.shade100
-                                : Colors.orange.shade100,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(controller.locationSource.value,
-                              style: TextStyle(
-                                  fontSize: 8,
-                                  fontWeight: FontWeight.bold,
-                                  color: controller.locationSource.value.contains("GPS")
-                                      ? Colors.green
-                                      : Colors.deepOrange)),
-                        )
-                      : const SizedBox()),
+        title: Obx(() {
+          // Jika Mode Admin
+          if (controller.isAdmin.value) {
+            return Row(
+              children: [
+                const Icon(Icons.admin_panel_settings, color: Colors.red),
+                const SizedBox(width: 8),
+                Text(
+                  "Mode Admin",
+                  style: GoogleFonts.poppins(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16),
+                ),
+              ],
+            );
+          }
+
+          // Jika User Biasa 
+          return GestureDetector(
+            onTap: () => Get.to(() => MapView()),
+            child: Container(
+              constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.65),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(50), 
+                border: Border.all(color: Colors.grey.shade200),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  )
                 ],
               ),
-              Row(children: [
-                const Icon(Icons.location_on, size: 14, color: Colors.blue),
-                const SizedBox(width: 4),
-                Obx(() => Text(
-                    controller.address.value.length > 25
-                        ? "${controller.address.value.substring(0, 25)}..."
-                        : controller.address.value,
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.blue.shade800,
-                        fontWeight: FontWeight.bold))),
-                const Icon(Icons.arrow_drop_down, color: Colors.blue, size: 18)
-              ]),
-            ],
-          ),
-        ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Icon Lokasi Merah
+                  Icon(Icons.location_on_rounded, color: Colors.red.shade700, size: 20),
+                  const SizedBox(width: 8),
+                  
+                  // Kolom Teks Alamat
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Lokasi Pengiriman",
+                          style: TextStyle(fontSize: 10, color: Colors.grey),
+                        ),
+                        Text(
+                          controller.address.value, 
+                          style: const TextStyle(
+                            fontSize: 12, 
+                            fontWeight: FontWeight.bold, 
+                            color: Colors.black87
+                          ),
+                          maxLines: 1, 
+                          overflow: TextOverflow.ellipsis, 
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(width: 4),
+                  const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey, size: 18),
+                ],
+              ),
+            ),
+          );
+        }),
+
         actions: [
           Obx(() => !controller.isAdmin.value
               ? Padding(
